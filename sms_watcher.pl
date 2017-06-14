@@ -5,12 +5,15 @@ use lib qw(/home/void/sms_watcher/extlib/lib/perl5/x86_64-linux);
 no warnings 'experimental::signatures';
 use feature 'signatures';
 
+use utf8;
 use Linux::Inotify2;
 use Email::Simple;
 use Net::SMTP;
 use POSIX qw(strftime);
 use File::Find;
 use File::Basename;
+use Encode;
+use MIME::Base64;
 
 use Data::Dumper;
 
@@ -101,8 +104,10 @@ sub sms_file_to_email($sms_file)
 			From    => MAIL_FROM,
 			To      => RCPT_TO,
 			Subject => sms_file_to_subject($sms_file),
+			'Content-type' => 'text/plain; charset=UTF-8',
+			'Content-Transfer-Encoding' => 'base64',
 		],
-		body => read_file($sms_file),
+		body => encode_base64(encode('utf8', read_file($sms_file))),
 	);
 	$email->as_string();
 }
