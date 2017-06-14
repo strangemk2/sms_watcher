@@ -74,18 +74,17 @@ sub main
 	$logger->("sms_watcher started.");
 
 	my $inotify = Linux::Inotify2->new() or die "Unable to create new inotify object: $!" ;
-	$inotify->watch (WATCH_FOLDER, IN_MODIFY) or die "Watch creation failed" ;
+	$inotify->watch (WATCH_FOLDER, IN_MODIFY|IN_MOVED_TO|IN_CREATE) or die "Watch creation failed" ;
 
 	my $sms_mail_f = partial(\&send_sms_mail, get_smtp_info());
 	my $sms_watcher = partial(\&check_sms, $sms_mail_f, WATCH_FOLDER);
 
-	my $timestamp = time();
 	while (1)
 	{
+		my $timestamp = time();
 		my @events = $inotify->read();
 		die "read error: $!" if (@events == 0);
 		$sms_watcher->($timestamp);
-		$timestamp = time();
 	}
 
 	$logger->("sms_watcher ended.");
@@ -107,7 +106,7 @@ sub sms_file_to_email($sms_file)
 			'Content-type' => 'text/plain; charset=UTF-8',
 			'Content-Transfer-Encoding' => 'base64',
 		],
-		body => encode_base64(encode('utf8', read_file($sms_file))),
+		body => encode_base64(read_file($sms_file)),
 	);
 	$email->as_string();
 }
@@ -117,7 +116,7 @@ sub check_sms($send_mail_f, $sms_folder, $timestamp)
 	my $wanted = sub
 	{
 		my $n = $File::Find::name;
-		$send_mail_f->(sms_file_to_email($n)) if ((stat($n))[9] > $timestamp);
+		$send_mail_f->(sms_file_to_email($n)) if (-f $n and (stat($n))[9] > $timestamp);
 	};
 
 	find($wanted, $sms_folder);
