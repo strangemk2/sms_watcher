@@ -48,9 +48,9 @@ sub partial
 
 sub read_file($filename)
 {
-    local $/ = undef;
-    open my $fh, "<", $filename or die "Could not open $filename: $!";
-    <$fh> // '';
+	local $/ = undef;
+	open my $fh, "<", $filename or die "Could not open $filename: $!";
+	<$fh> // '';
 }
 
 sub domain_name($s)
