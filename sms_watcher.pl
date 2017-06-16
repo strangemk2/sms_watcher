@@ -1,6 +1,7 @@
 use 5.024;
-use lib qw(/home/void/sms_watcher/extlib/lib/perl5);
-use lib qw(/home/void/sms_watcher/extlib/lib/perl5/x86_64-linux);
+use FindBin qw($Bin);
+use lib qq($Bin/extlib/lib/perl5);
+use lib qq($Bin/extlib/lib/perl5/x86_64-linux);
 
 no warnings 'experimental::signatures';
 use feature 'signatures';
