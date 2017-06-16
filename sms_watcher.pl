@@ -14,24 +14,25 @@ use File::Find;
 use File::Basename;
 use Encode;
 use MIME::Base64;
+use Email::MessageID;
 
 use Data::Dumper;
 
 use constant
 {
-	WATCH_FOLDER => "/home/void/sms_watcher/a",
+	WATCH_FOLDER => "/var/spool/gammu/inbox/",
 	LOG_FILE => "log.txt",
 
 	MAIL_FROM => '13611941185@v2mail.net',
-	RCPT_TO => 'strangemk3@gmail.com',
+	RCPT_TO => '1522548893@qq.com',
 
 	SMTP_DEBUG => 1,
 	SMTP_TIMEOUT => 30,
 
-	SMTP_SERVER => '127.0.0.1',
-	SMTP_PORT => '465',
+	SMTP_SERVER => 'mail.v2mail.net',
+	SMTP_PORT => 465,
 	SMTP_USER => '13611941185',
-	SMTP_PASSWORD => 'wh@tEveR',
+	SMTP_PASSWORD => 'Ik9hujszfn9pM',
 };
 
 # Logger staff
@@ -92,7 +93,8 @@ sub main
 
 sub sms_file_to_subject($sms_file)
 {
-	basename($sms_file);
+	my @suffixes = ('.txt');
+	basename($sms_file, @suffixes);
 }
 
 sub sms_file_to_email($sms_file)
@@ -103,6 +105,7 @@ sub sms_file_to_email($sms_file)
 			From    => MAIL_FROM,
 			To      => RCPT_TO,
 			Subject => sms_file_to_subject($sms_file),
+			'Message-ID' => Email::MessageID->new(host => 'v2mail.net')->in_brackets,
 			'Content-type' => 'text/plain; charset=UTF-8',
 			'Content-Transfer-Encoding' => 'base64',
 		],
@@ -124,28 +127,25 @@ sub check_sms($send_mail_f, $sms_folder, $timestamp)
 
 sub send_sms_mail($smtp_info, $sms_data)
 {
-	say Dumper($smtp_info);
-	say Dumper($sms_data);
-	return;
-
 	my $smtp = Net::SMTP->new($smtp_info->{host},
 		Port => $smtp_info->{port},
 		SSL     => 1,
 		Timeout => SMTP_TIMEOUT,
 		Debug   => SMTP_DEBUG,
-	);
+		SSL_verify_mode => IO::Socket::SSL::SSL_VERIFY_NONE,
+	) or die $!;
 	$smtp->auth($smtp_info->{user}, $smtp_info->{password});
 	$smtp->mail(MAIL_FROM);
-    $smtp->to(RCPT_TO);
-    $smtp->data();
-    $smtp->datasend($sms_data);
-    $smtp->dataend();
+	$smtp->to(RCPT_TO);
+	$smtp->data();
+	$smtp->datasend($sms_data);
+	$smtp->dataend();
 	$smtp->quit();
 }
 
 sub get_smtp_info()
 {
-	{ ip => SMTP_SERVER, port => SMTP_PORT, user => SMTP_USER, password => SMTP_PASSWORD };
+	{ host => SMTP_SERVER, port => SMTP_PORT, user => SMTP_USER, password => SMTP_PASSWORD };
 }
 
 main();
