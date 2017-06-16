@@ -77,14 +77,19 @@ sub main
 		domain_name($cfg->param('MAIL.FROM')));
 	my $sms_watcher = partial(\&check_sms, $sms_mail_f, $convert_mail_f, $cfg->param('COMMON.WATCH_FOLDER'), $logger);
 
-	while (1)
+	my $loop = 1;
+	$SIG{INT} = sub { $loop = 0 };
+	eval
 	{
-		my $timestamp = time();
-		my @events = $inotify->read();
-		die "read error: $!" if (@events == 0);
-		$logger->("Got folder inotified: " . $cfg->param('COMMON.WATCH_FOLDER'));
-		$sms_watcher->($timestamp);
-	}
+		while ($loop)
+		{
+			my $timestamp = time();
+			my @events = $inotify->read();
+			die "read error: $!" if (@events == 0);
+			$logger->("Got folder inotified: " . $cfg->param('COMMON.WATCH_FOLDER'));
+			$sms_watcher->($timestamp);
+		}
+	};
 
 	$logger->("sms_watcher ended.");
 }
