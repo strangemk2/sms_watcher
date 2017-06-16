@@ -1,0 +1,15 @@
+[COMMON]
+WATCH_FOLDER	= /var/spool/gammu/inbox/
+LOG_FILE		= log.txt
+
+[MAIL]
+FROM			= foo@bar.com
+TO				= hoge@nori.com
+
+[SMTP]
+DEBUG			= 1
+TIMEOUT			= 30
+SERVER			= nori.com
+PORT			= 465
+USER			= hoge
+PASSWORD		= hogehoge
