@@ -32,7 +32,9 @@ sub get_logger($filename)
 	$fh->autoflush();
 	return sub
 	{
-		say {$fh} get_current_time() . " [log] $$: @_";
+		my $l = get_current_time() . " [log] $$: @_";
+		chomp($l);
+		say {$fh} $l;
 	}
 }
 
