@@ -15,25 +15,9 @@ use File::Basename;
 use Encode;
 use MIME::Base64;
 use Email::MessageID;
+use Config::Simple;
 
 use Data::Dumper;
-
-use constant
-{
-	WATCH_FOLDER => "/var/spool/gammu/inbox/",
-	LOG_FILE => "log.txt",
-
-	MAIL_FROM => '13611941185@v2mail.net',
-	RCPT_TO => '1522548893@qq.com',
-
-	SMTP_DEBUG => 1,
-	SMTP_TIMEOUT => 30,
-
-	SMTP_SERVER => 'mail.v2mail.net',
-	SMTP_PORT => 465,
-	SMTP_USER => '13611941185',
-	SMTP_PASSWORD => 'Ik9hujszfn9pM',
-};
 
 # Logger staff
 sub get_current_time()
@@ -68,17 +52,28 @@ sub read_file($filename)
     <$fh> // '';
 }
 
+sub domain_name($s)
+{
+	$s =~ s/.*@//;
+	$s;
+}
+
 # Main staff
 sub main
 {
-	my $logger = get_logger(LOG_FILE);
+	my $cfg = Config::Simple->new('sms_watcher.ini') or die Config::Simple->error();
+	my $logger = get_logger($cfg->param('COMMON.LOG_FILE'));
 	$logger->("sms_watcher started.");
 
 	my $inotify = Linux::Inotify2->new() or die "Unable to create new inotify object: $!" ;
-	$inotify->watch (WATCH_FOLDER, IN_MODIFY|IN_MOVED_TO|IN_CREATE) or die "Watch creation failed" ;
+	$inotify->watch ($cfg->param('COMMON.WATCH_FOLDER'), IN_MODIFY|IN_MOVED_TO|IN_CREATE) or die "Watch creation failed" ;
 
-	my $sms_mail_f = partial(\&send_sms_mail, get_smtp_info());
-	my $sms_watcher = partial(\&check_sms, $sms_mail_f, WATCH_FOLDER);
+	my $sms_mail_f = partial(\&send_sms_mail, $cfg);
+	my $convert_mail_f = partial(\&sms_file_to_email,
+		$cfg->param('MAIL.FROM'),
+		$cfg->param('MAIL.TO'),
+		domain_name($cfg->param('MAIL.FROM')));
+	my $sms_watcher = partial(\&check_sms, $sms_mail_f, $convert_mail_f, $cfg->param('COMMON.WATCH_FOLDER'));
 
 	while (1)
 	{
@@ -97,15 +92,15 @@ sub sms_file_to_subject($sms_file)
 	basename($sms_file, @suffixes);
 }
 
-sub sms_file_to_email($sms_file)
+sub sms_file_to_email($from, $to, $host, $sms_file)
 {
 	my $email = Email::Simple->create(
 		header =>
 		[
-			From    => MAIL_FROM,
-			To      => RCPT_TO,
+			From    => $from,
+			To      => $to,
 			Subject => sms_file_to_subject($sms_file),
-			'Message-ID' => Email::MessageID->new(host => 'v2mail.net')->in_brackets,
+			'Message-ID' => Email::MessageID->new(host => $host)->in_brackets(),
 			'Content-type' => 'text/plain; charset=UTF-8',
 			'Content-Transfer-Encoding' => 'base64',
 		],
@@ -114,38 +109,33 @@ sub sms_file_to_email($sms_file)
 	$email->as_string();
 }
 
-sub check_sms($send_mail_f, $sms_folder, $timestamp)
+sub check_sms($send_mail_f, $convert_mail_f, $sms_folder, $timestamp)
 {
 	my $wanted = sub
 	{
 		my $n = $File::Find::name;
-		$send_mail_f->(sms_file_to_email($n)) if (-f $n and (stat($n))[9] > $timestamp);
+		$send_mail_f->($convert_mail_f->($n)) if (-f $n and (stat($n))[9] > $timestamp);
 	};
 
 	find($wanted, $sms_folder);
 }
 
-sub send_sms_mail($smtp_info, $sms_data)
+sub send_sms_mail($cfg, $sms_data)
 {
-	my $smtp = Net::SMTP->new($smtp_info->{host},
-		Port => $smtp_info->{port},
+	my $smtp = Net::SMTP->new($cfg->param('SMTP.SERVER'),
+		Port => $cfg->param('SMTP.PORT'),
 		SSL     => 1,
-		Timeout => SMTP_TIMEOUT,
-		Debug   => SMTP_DEBUG,
+		Timeout => $cfg->param('SMTP.TIMEOUT'),
+		Debug   => $cfg->param('SMTP.DEBUG'),
 		SSL_verify_mode => IO::Socket::SSL::SSL_VERIFY_NONE,
 	) or die $!;
-	$smtp->auth($smtp_info->{user}, $smtp_info->{password});
-	$smtp->mail(MAIL_FROM);
-	$smtp->to(RCPT_TO);
+	$smtp->auth($cfg->param('SMTP.USER'), $cfg->param('SMTP.PASSWORD'));
+	$smtp->mail($cfg->param('MAIL.FROM'));
+	$smtp->to($cfg->param('MAIL.TO'));
 	$smtp->data();
 	$smtp->datasend($sms_data);
 	$smtp->dataend();
 	$smtp->quit();
-}
-
-sub get_smtp_info()
-{
-	{ host => SMTP_SERVER, port => SMTP_PORT, user => SMTP_USER, password => SMTP_PASSWORD };
 }
 
 main();
