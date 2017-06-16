@@ -29,6 +29,7 @@ sub get_current_time()
 sub get_logger($filename)
 {
 	open (my $fh, ">>", $filename) or die "Open log file $filename error.";
+	$fh->autoflush();
 	return sub
 	{
 		say {$fh} get_current_time() . " [log] $$: @_";
@@ -147,11 +148,11 @@ sub send_sms_mail($cfg, $logger, $sms_data)
 	};
 	if ($@)
 	{
-		$logger->("Sms mail have been sucessfully delivered.");
+		$logger->("Sms mail encounted error. $@");
 	}
 	else
 	{
-		$logger->("Sms mail encounted error. $@");
+		$logger->("Sms mail have been sucessfully delivered.");
 	}
 }
 
