@@ -17,6 +17,7 @@ use Encode;
 use MIME::Base64;
 use Email::MessageID;
 use Config::Simple;
+use Try::Tiny;
 
 use Data::Dumper;
 
@@ -81,7 +82,8 @@ sub main
 
 	my $loop = 1;
 	$SIG{INT} = sub { $loop = 0 };
-	eval
+	# this try block is to prevent "Interrupted system call" error.
+	try
 	{
 		while ($loop)
 		{
@@ -136,7 +138,7 @@ sub check_sms($process_sms_f, $convert_mail_f, $sms_folder, $logger, $timestamp)
 
 sub send_sms_mail($cfg, $logger, $sms_data)
 {
-	eval
+	try
 	{
 		my $smtp = Net::SMTP->new($cfg->param('SMTP.SERVER'),
 			Port => $cfg->param('SMTP.PORT'),
@@ -152,15 +154,14 @@ sub send_sms_mail($cfg, $logger, $sms_data)
 		$smtp->datasend($sms_data);
 		$smtp->dataend();
 		$smtp->quit();
-	};
-	if ($@)
-	{
-		$logger->("Sms mail encounted error. $@");
-	}
-	else
-	{
+
 		$logger->("Sms mail have been sucessfully delivered.");
 	}
+	catch
+	{
+		$logger->("Sms mail encounted error. $_");
+		die;
+	};
 }
 
 main();
