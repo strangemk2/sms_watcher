@@ -72,7 +72,7 @@ sub main
 	$logger->("sms_watcher started.");
 
 	my $inotify = Linux::Inotify2->new() or die "Unable to create new inotify object: $!" ;
-	$inotify->watch ($cfg->param('COMMON.WATCH_FOLDER'), IN_MODIFY|IN_MOVED_TO|IN_CREATE) or die "Watch creation failed" ;
+	$inotify->watch($cfg->param('COMMON.WATCH_FOLDER'), IN_MODIFY|IN_MOVED_TO|IN_CREATE) or die "Watch creation failed";
 
 	my $sms_mail_f = partial(\&send_sms_mail, $cfg, $logger);
 	my $sms_mail_retry_f = partial(
