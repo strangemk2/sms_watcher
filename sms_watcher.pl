@@ -93,7 +93,7 @@ sub main
 		}
 	};
 
-	$logger->("sms_watcher ended.");
+	$logger->("sms_watcher stopped.");
 }
 
 sub sms_file_to_subject($sms_file)
