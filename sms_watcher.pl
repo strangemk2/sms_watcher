@@ -74,11 +74,18 @@ sub main
 	$inotify->watch ($cfg->param('COMMON.WATCH_FOLDER'), IN_MODIFY|IN_MOVED_TO|IN_CREATE) or die "Watch creation failed" ;
 
 	my $sms_mail_f = partial(\&send_sms_mail, $cfg, $logger);
+	my $sms_mail_retry_f = partial(
+		sms_process_retry($cfg->param('COMMON.RETRY'), $cfg->param('COMMON.INTERVAL')),
+		$sms_mail_f, $logger);
 	my $convert_mail_f = partial(\&sms_file_to_email,
 		$cfg->param('MAIL.FROM'),
 		$cfg->param('MAIL.TO'),
 		domain_name($cfg->param('MAIL.FROM')));
-	my $sms_watcher = partial(\&check_sms, $sms_mail_f, $convert_mail_f, $cfg->param('COMMON.WATCH_FOLDER'), $logger);
+	my $sms_watcher = partial(\&check_sms,
+		$sms_mail_retry_f,
+		$convert_mail_f,
+		$cfg->param('COMMON.WATCH_FOLDER'),
+		$logger);
 
 	my $loop = 1;
 	$SIG{INT} = sub { $loop = 0 };
@@ -162,6 +169,39 @@ sub send_sms_mail($cfg, $logger, $sms_data)
 		$logger->("Sms mail encounted error. $_");
 		die;
 	};
+}
+
+# TODO: there's a definetely memory leak that anonymous function "$do_with_retry" will never freed.
+# Though Scalar::Util::weaken count decrease the reference counter,
+# the anonymous function will be freed right after outer function returns.
+# In the use case in this script, the call to make_retry is limited, so nothing
+# to worry about the slightly leaks.
+#use Scalar::Util qw(weaken);
+sub sms_process_retry($max_retry, $retry_interval)
+{
+	my $max = $max_retry;
+	my $interval = $retry_interval;
+	my $do_with_retry;
+	$do_with_retry = sub($sms_process_f, $logger, $arg, $count = $max)
+	{
+		try
+		{
+			return $sms_process_f->($arg);
+		}
+		catch
+		{
+			if ($count == 0)
+			{
+				$logger->("Retry aborted.");
+				return;
+			}
+			$logger->("Retry " . ($max - $count + 1) . ".");
+			sleep($interval);
+			return $do_with_retry->($sms_process_f, $logger, $arg, $count - 1);
+		};
+	};
+	#weaken($do_with_retry);
+	return $do_with_retry;
 }
 
 main();

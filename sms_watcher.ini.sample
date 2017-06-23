@@ -2,6 +2,8 @@
 WATCH_FOLDER	= /var/spool/gammu/inbox/
 LOG_FILE		= log.txt
 
+RETRY			= 3
+
 [MAIL]
 FROM			= foo@bar.com
 TO				= hoge@nori.com
