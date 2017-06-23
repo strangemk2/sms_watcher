@@ -87,20 +87,30 @@ sub main
 		$cfg->param('COMMON.WATCH_FOLDER'),
 		$logger);
 
-	my $loop = 1;
-	$SIG{INT} = sub { $loop = 0 };
-	# this try block is to prevent "Interrupted system call" error.
-	try
+	if (@ARGV > 0)
 	{
-		while ($loop)
+		my $timestamp = $ARGV[0];
+		$logger->("Enter recovery mode, recovery from epoch time $timestamp");
+		$sms_watcher->($timestamp);
+		$logger->("Recovery completed.");
+	}
+	else
+	{
+		my $loop = 1;
+		$SIG{INT} = sub { $loop = 0 };
+		# this try block is to prevent "Interrupted system call" error.
+		try
 		{
-			my $timestamp = time();
-			my @events = $inotify->read();
-			die "read error: $!" if (@events == 0);
-			$logger->("Got folder inotified: " . $cfg->param('COMMON.WATCH_FOLDER'));
-			$sms_watcher->($timestamp);
-		}
-	};
+			while ($loop)
+			{
+				my $timestamp = time();
+				my @events = $inotify->read();
+				die "read error: $!" if (@events == 0);
+				$logger->("Got folder inotified: " . $cfg->param('COMMON.WATCH_FOLDER'));
+				$sms_watcher->($timestamp);
+			}
+		};
+	}
 
 	$logger->("sms_watcher stopped.");
 }
