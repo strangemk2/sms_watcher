@@ -18,6 +18,7 @@ use MIME::Base64;
 use Email::MessageID;
 use Config::Simple;
 use Try::Tiny;
+use List::MoreUtils qw(apply);
 
 use Data::Dumper;
 
@@ -140,17 +141,23 @@ sub sms_file_to_email($from, $to, $host, $sms_file)
 
 sub check_sms($process_sms_f, $convert_mail_f, $sms_folder, $logger, $timestamp)
 {
+	my @sms_list;
 	my $wanted = sub
 	{
 		my $n = $File::Find::name;
 		if (-f $n and (stat($n))[9] > $timestamp)
 		{
-			$logger->("Found new sms: $n");
-			$process_sms_f->($convert_mail_f->($n));
+			push @sms_list, $n;
 		}
 	};
-
 	find($wanted, $sms_folder);
+
+	apply
+	{
+		$logger->("Found new sms: $_");
+		$process_sms_f->($convert_mail_f->($_));
+	}
+	sort (@sms_list);
 }
 
 sub send_sms_mail($cfg, $logger, $sms_data)
