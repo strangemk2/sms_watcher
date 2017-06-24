@@ -1,24 +1,21 @@
 use 5.024;
 use FindBin qw($Bin);
+use lib qw/./;
 use lib qq($Bin/extlib/lib/perl5);
 use lib qq($Bin/extlib/lib/perl5/x86_64-linux);
 
 no warnings 'experimental::signatures';
 use feature 'signatures';
+no warnings 'experimental::smartmatch';
+use feature "switch";
 
 use utf8;
 use Linux::Inotify2;
-use Email::Simple;
-use Net::SMTP;
 use POSIX qw(strftime);
 use File::Find;
-use File::Basename;
-use Encode;
-use MIME::Base64;
-use Email::MessageID;
 use Config::Simple;
-use Try::Tiny;
 use List::MoreUtils qw(apply);
+use Try::Tiny;
 
 use Data::Dumper;
 
@@ -51,19 +48,6 @@ sub partial
 	}
 }
 
-sub read_file($filename)
-{
-	local $/ = undef;
-	open my $fh, "<", $filename or die "Could not open $filename: $!";
-	<$fh> // '';
-}
-
-sub domain_name($s)
-{
-	$s =~ s/.*@//;
-	$s;
-}
-
 # Main staff
 sub main
 {
@@ -74,17 +58,16 @@ sub main
 	my $inotify = Linux::Inotify2->new() or die "Unable to create new inotify object: $!" ;
 	$inotify->watch($cfg->param('COMMON.WATCH_FOLDER'), IN_MODIFY|IN_MOVED_TO|IN_CREATE) or die "Watch creation failed";
 
-	my $sms_mail_f = partial(\&send_sms_mail, $cfg, $logger);
-	my $sms_mail_retry_f = partial(
-		sms_process_retry($cfg->param('COMMON.RETRY'), $cfg->param('COMMON.INTERVAL')),
-		$sms_mail_f, $logger);
-	my $convert_mail_f = partial(\&sms_file_to_email,
-		$cfg->param('MAIL.FROM'),
-		$cfg->param('MAIL.TO'),
-		domain_name($cfg->param('MAIL.FROM')));
+	my @sms_process_funcs = map
+	{
+		my $process_f = partial(get_process_func($_), $cfg, $logger);
+		partial(sms_process_retry($cfg->param('COMMON.RETRY'), $cfg->param('COMMON.INTERVAL')),
+			$process_f, $logger);
+	}
+	$cfg->param('COMMON.BACKEND');
+
 	my $sms_watcher = partial(\&check_sms,
-		$sms_mail_retry_f,
-		$convert_mail_f,
+		\@sms_process_funcs,
 		$cfg->param('COMMON.WATCH_FOLDER'),
 		$logger);
 
@@ -116,30 +99,7 @@ sub main
 	$logger->("sms_watcher stopped.");
 }
 
-sub sms_file_to_subject($sms_file)
-{
-	my @suffixes = ('.txt');
-	basename($sms_file, @suffixes);
-}
-
-sub sms_file_to_email($from, $to, $host, $sms_file)
-{
-	my $email = Email::Simple->create(
-		header =>
-		[
-			From    => $from,
-			To      => $to,
-			Subject => sms_file_to_subject($sms_file),
-			'Message-ID' => Email::MessageID->new(host => $host)->in_brackets(),
-			'Content-type' => 'text/plain; charset=UTF-8',
-			'Content-Transfer-Encoding' => 'base64',
-		],
-		body => encode_base64(read_file($sms_file)),
-	);
-	$email->as_string();
-}
-
-sub check_sms($process_sms_f, $convert_mail_f, $sms_folder, $logger, $timestamp)
+sub check_sms($sms_process_funcs, $sms_folder, $logger, $timestamp)
 {
 	my @sms_list;
 	my $wanted = sub
@@ -154,38 +114,34 @@ sub check_sms($process_sms_f, $convert_mail_f, $sms_folder, $logger, $timestamp)
 
 	apply
 	{
+		my $sms = $_;
 		$logger->("Found new sms: $_");
-		$process_sms_f->($convert_mail_f->($_));
+		apply { $_->($sms) } @$sms_process_funcs;
 	}
 	sort (@sms_list);
 }
 
-sub send_sms_mail($cfg, $logger, $sms_data)
+sub get_process_func($type)
 {
-	try
+	given ($type)
 	{
-		my $smtp = Net::SMTP->new($cfg->param('SMTP.SERVER'),
-			Port => $cfg->param('SMTP.PORT'),
-			SSL     => 1,
-			Timeout => $cfg->param('SMTP.TIMEOUT'),
-			Debug   => $cfg->param('SMTP.DEBUG'),
-			SSL_verify_mode => IO::Socket::SSL::SSL_VERIFY_NONE,
-		) or die $!;
-		$smtp->auth($cfg->param('SMTP.USER'), $cfg->param('SMTP.PASSWORD'));
-		$smtp->mail($cfg->param('MAIL.FROM'));
-		$smtp->to($cfg->param('MAIL.TO'));
-		$smtp->data();
-		$smtp->datasend($sms_data);
-		$smtp->dataend();
-		$smtp->quit();
-
-		$logger->("Sms mail have been sucessfully delivered.");
+		when (/mail/)
+		{
+			use Plugin::Backend::Email;
+			return \&Plugin::Backend::Email::execute;
+		}
+		when (/copy/)
+		{
+		}
+		when (/http/)
+		{
+		}
+		default
+		{
+			use Plugin::Backend::Dummy;
+			return \&Plugin::Backend::Dummy::execute;
+		}
 	}
-	catch
-	{
-		$logger->("Sms mail encounted error. $_");
-		die;
-	};
 }
 
 # TODO: there's a definetely memory leak that anonymous function "$do_with_retry" will never freed.
