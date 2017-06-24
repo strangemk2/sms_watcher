@@ -22,3 +22,4 @@ sub domain_name($s)
 	$s;
 }
 
+1;

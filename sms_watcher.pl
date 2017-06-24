@@ -125,18 +125,20 @@ sub get_process_func($type)
 {
 	given ($type)
 	{
-		when (/mail/)
+		when (/mail/i)
 		{
 			use Plugin::Backend::Email;
 			return \&Plugin::Backend::Email::execute;
 		}
-		when (/copy/)
+		when (/copy/i)
 		{
 			use Plugin::Backend::Copy;
 			return \&Plugin::Backend::Copy::execute;
 		}
-		when (/http/)
+		when (/http/i)
 		{
+			use Plugin::Backend::Http;
+			return \&Plugin::Backend::Http::execute;
 		}
 		default
 		{

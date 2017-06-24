@@ -20,3 +20,6 @@ PASSWORD		= hogehoge
 
 [COPY]
 DEST			= ./bak
+
+[HTTP]
+URL			= http://localhost:8888
