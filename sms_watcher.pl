@@ -132,6 +132,8 @@ sub get_process_func($type)
 		}
 		when (/copy/)
 		{
+			use Plugin::Backend::Copy;
+			return \&Plugin::Backend::Copy::execute;
 		}
 		when (/http/)
 		{
