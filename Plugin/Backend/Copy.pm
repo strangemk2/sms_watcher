@@ -7,8 +7,8 @@ package Plugin::Backend::Copy;
 
 use utf8;
 use File::Basename;
-use Try::Tiny;
 use File::Copy;
+use Try::Tiny;
 
 no warnings 'experimental::signatures';
 use feature 'signatures';

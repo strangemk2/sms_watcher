@@ -14,22 +14,10 @@ use Email::MessageID;
 use File::Basename;
 use Try::Tiny;
 
+use Plugin::Utils;
+
 no warnings 'experimental::signatures';
 use feature 'signatures';
-
-# Misc staff
-sub read_file($filename)
-{
-	local $/ = undef;
-	open my $fh, "<", $filename or die "Could not open $filename: $!";
-	<$fh> // '';
-}
-
-sub domain_name($s)
-{
-	$s =~ s/.*@//;
-	$s;
-}
 
 # Main staff
 sub execute($cfg, $logger, $filename)
