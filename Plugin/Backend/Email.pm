@@ -93,11 +93,11 @@ sub send_sms_mail($params, $logger, $sms_data)
 		$smtp->dataend();
 		$smtp->quit();
 
-		$logger->("Sms mail have been sucessfully delivered.");
+		$logger->("Send sms mail succeeded.");
 	}
 	catch
 	{
-		$logger->("Sms mail encounted error. $_");
+		$logger->("Send sms mail failed. $_");
 		die;
 	};
 }

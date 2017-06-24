@@ -13,7 +13,7 @@ use feature 'signatures';
 # Main staff
 sub execute($cfg, $logger, $filename)
 {
-	$logger->("Dummy process backend of file: $filename.");
+	$logger->("Dummy backend of file: $filename.");
 }
 
 1;
