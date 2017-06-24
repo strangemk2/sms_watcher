@@ -1,8 +1,10 @@
 [COMMON]
+BACKEND			= mail,copy
 WATCH_FOLDER	= /var/spool/gammu/inbox/
 LOG_FILE		= log.txt
 
 RETRY			= 3
+INTERVAL		= 1
 
 [MAIL]
 FROM			= foo@bar.com
@@ -15,3 +17,6 @@ SERVER			= nori.com
 PORT			= 465
 USER			= hoge
 PASSWORD		= hogehoge
+
+[COPY]
+DEST			= ./bak
