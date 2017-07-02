@@ -63,7 +63,7 @@ sub check_permission($c, $id)
 
 sub render_certificate($cfg, $c)
 {
-	say Dumper($c->tx->req->params);
+	$c->app->log->debug(Dumper($c->tx->req->params));
 
 	if (!@{$c->tx->req->params->pairs})
 	{
@@ -111,8 +111,8 @@ sub render_mp($cfg, $c)
 		return;
 	}
 
-	say Dumper($c->tx->req->params);
-	say $c->req->body;
+	$c->app->log->debug(Dumper($c->tx->req->params));
+	$c->app->log->debug($c->req->body);
 
 	#$c->render(text => "success");
 	#return;
