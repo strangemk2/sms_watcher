@@ -56,6 +56,11 @@ sub calc_signature
 	return sha1_hex(join('', sort(@_)));
 }
 
+sub check_permission($c, $id)
+{
+	return $c->param('openid') eq $id;
+}
+
 sub render_certificate($cfg, $c)
 {
 	say Dumper($c->tx->req->params);
@@ -95,7 +100,8 @@ sub make_encrypted_xml($encrypt, $msg_signature, $timestamp, $nonce)
 
 sub render_mp($cfg, $c)
 {
-	if (!check_clear_signature($c, $cfg->param('AES.TOKEN')))
+	if (!check_clear_signature($c, $cfg->param('AES.TOKEN')) or
+		!check_permission($c, $cfg->param('AUTH.OPENID')))
 	{
 		$c->render(text => '', status => 503);
 		return;
@@ -138,13 +144,14 @@ sub render_mp($cfg, $c)
 	}
 	else
 	{
+		my $response_content = get_response_content($inner_dom->at('Content')->text);
 		my $response_encrypted = WeixinMPEncrypt::encrypt($cfg->param('AES.KEY'),
 				make_response_xml(
 					$inner_dom->at('FromUserName')->text,
 					$inner_dom->at('ToUserName')->text,
 					$inner_dom->at('CreateTime')->text,
 					$inner_dom->at('MsgType')->text,
-					$inner_dom->at('Content')->text),
+					$response_content),
 				$cfg->param('AES.APPID'));
 
 		my $response_signature = calc_signature($cfg->param('AES.TOKEN'),
@@ -167,6 +174,11 @@ sub get_render_function($func)
 {
 	my $cfg = Config::Simple->new('weixin_mp.ini') or die Config::Simple->error();
 	return partial($func, $cfg);
+}
+
+sub get_response_content($content)
+{
+	return $content;
 }
 
 get '/helloworld' => get_render_function(\&render_certificate);
