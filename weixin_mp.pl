@@ -1,14 +1,18 @@
 use 5.024;
 use FindBin qw($Bin);
+use lib qq/./;
 use lib qq($Bin/extlib/lib/perl5);
 use lib qq($Bin/extlib/lib/perl5/x86_64-linux);
 
 use utf8;
 use Digest::SHA1 qw(sha1_hex);
 use Config::Simple;
+use Try::Tiny;
 
 use Mojolicious::Lite;
 use Mojo::DOM;
+
+use WeixinMPEncrypt;
 
 use Data::Dumper;
 
@@ -52,11 +56,11 @@ sub calc_signature
 	return sha1_hex(join('', sort(@_)));
 }
 
-sub render_certificate($c)
+sub render_certificate($cfg, $c)
 {
 	say Dumper($c->tx->req->params);
 
-	if (!check_signature($c))
+	if (!check_clear_signature($c, $cfg->param('AES.TOKEN')))
 	{
 		$c->render(text => '', status => 503) 
 	}
@@ -89,15 +93,7 @@ sub make_encrypted_xml($encrypt, $msg_signature, $timestamp, $nonce)
 	</xml>";
 }
 
-sub weixin_mp_encrypt
-{
-}
-
-sub weixin_mp_decrypt
-{
-}
-
-sub render_mp($c, $cfg)
+sub render_mp($cfg, $c)
 {
 	if (!check_clear_signature($c, $cfg->param('AES.TOKEN')))
 	{
@@ -108,8 +104,8 @@ sub render_mp($c, $cfg)
 	say Dumper($c->tx->req->params);
 	say $c->req->body;
 
-	$c->render(text => "success");
-	return;
+	#$c->render(text => "success");
+	#return;
 
 	if ($c->param('encrypt_type') ne 'aes')
 	{
@@ -126,7 +122,14 @@ sub render_mp($c, $cfg)
 		return;
 	}
 
-	my $decrypted = weixin_mp_decrypt($cfg->param('AES.KEY'), $encrypted);
+	my $decrypted = WeixinMPEncrypt::decrypt($cfg->param('AES.KEY'),
+						$encrypted,
+						$cfg->param('AES.APPID'));
+	if (!$decrypted)
+	{
+		$c->render(text => '', status => 503);
+		return;
+	}
 	my $inner_dom =  Mojo::DOM->new->xml(1)->parse($decrypted);
 
 	if ($inner_dom->at('MsgType')->text ne 'text')
@@ -135,13 +138,15 @@ sub render_mp($c, $cfg)
 	}
 	else
 	{
-		my $response_encrypted = weixin_mp_encrypt($cfg->param('AES.KEY'),
-					make_response_xml(
+		my $response_encrypted = WeixinMPEncrypt::encrypt($cfg->param('AES.KEY'),
+				make_response_xml(
 					$inner_dom->at('FromUserName')->text,
 					$inner_dom->at('ToUserName')->text,
 					$inner_dom->at('CreateTime')->text,
 					$inner_dom->at('MsgType')->text,
-					"i'm very ok.\n我非常 ok."));
+					$inner_dom->at('Content')->text),
+				$cfg->param('AES.APPID'));
+
 		my $response_signature = calc_signature($cfg->param('AES.TOKEN'),
 					$c->param('timestamp'),
 					$c->param('nonce'),
@@ -164,7 +169,7 @@ sub get_render_function($func)
 	return partial($func, $cfg);
 }
 
-get '/helloworld' => \&render_certificate;
+get '/helloworld' => get_render_function(\&render_certificate);
 post '/helloworld' => get_render_function(\&render_mp);
 get '*' => \&render_503;
 get '/' => \&render_503;
