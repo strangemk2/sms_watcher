@@ -178,6 +178,20 @@ sub get_render_function($func)
 
 sub get_response_content($content)
 {
+	if ($content =~ m/^sms:(\d+),(.+)$/)
+	{
+		my $number = $1;
+		my $text = $2;
+		my $cmd = "gammu-smsd-inject TEXT $number -unicode -text \"$text\" > /dev/null 2>&1";
+		if (system($cmd) == 0)
+		{
+			return "sms sent.";
+		}
+		else
+		{
+			return "sms error.";
+		}
+	}
 	return $content;
 }
 
