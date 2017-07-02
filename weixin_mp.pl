@@ -65,7 +65,11 @@ sub render_certificate($cfg, $c)
 {
 	say Dumper($c->tx->req->params);
 
-	if (!check_clear_signature($c, $cfg->param('AES.TOKEN')))
+	if (!@{$c->tx->req->params->pairs})
+	{
+		$c->render(text => "success");
+	}
+	elsif (!check_clear_signature($c, $cfg->param('AES.TOKEN')))
 	{
 		$c->render(text => '', status => 503) 
 	}
