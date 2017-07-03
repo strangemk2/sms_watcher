@@ -176,7 +176,7 @@ sub render_503($c)
 
 sub get_render_function($func)
 {
-	my $cfg = Config::Simple->new('weixin_mp.ini') or die Config::Simple->error();
+	state $cfg = Config::Simple->new('weixin_mp.ini') or die Config::Simple->error();
 	return partial($func, $cfg);
 }
 
