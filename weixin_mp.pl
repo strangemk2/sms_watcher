@@ -199,8 +199,8 @@ sub get_response_content($content)
 	return $content;
 }
 
-get '/helloworld' => get_render_function(\&render_certificate);
-post '/helloworld' => get_render_function(\&render_mp);
+get '/weixinmp' => get_render_function(\&render_certificate);
+post '/weixinmp' => get_render_function(\&render_mp);
 get '*' => \&render_503;
 get '/' => \&render_503;
 
