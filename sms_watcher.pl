@@ -91,6 +91,7 @@ sub main
 				my @events = $inotify->read();
 				die "read error: $!" if (@events == 0);
 				$logger->("Got folder inotified: " . $cfg->param('COMMON.WATCH_FOLDER'));
+				sleep $cfg->param('COMMON.INTERVAL');
 				$sms_watcher->($timestamp);
 			}
 		};
