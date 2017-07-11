@@ -8,8 +8,12 @@ package Plugin::Backend::Http;
 use utf8;
 use LWP::UserAgent;
 use Try::Tiny;
+use File::Basename;
 
 use Plugin::Utils;
+
+use Config::Simple;
+use WeixinMPEncrypt;
 
 no warnings 'experimental::signatures';
 use feature 'signatures';
@@ -22,10 +26,12 @@ sub execute($cfg, $logger, $filename)
 		my $url = $cfg->param('HTTP.URL');
 
 		my $ua = LWP::UserAgent->new();
-		my $data = join (',', $filename, read_file($filename));
+		my $data = join (',', basename($filename, '.txt'), read_file($filename));
 		my $res = $ua->post($url,
-			'Content-Type' => 'text/plain; charset=utf-8',
-			'Content' => $data);
+			'Content-Type' 	=> 'text/plain; charset=utf-8',
+			'Content' 	=> WeixinMPEncrypt::encrypt($cfg->param('AES.KEY'),
+								$cfg->param('HTTP.OPENID') . ",$data",
+								$cfg->param('AES.APPID')));
 		if ($res->is_success)
 		{
 			$logger->("Http send succeeded. file: $filename.");

@@ -18,6 +18,8 @@ use Data::Dumper;
 
 no warnings 'experimental::signatures';
 use feature 'signatures';
+no warnings "experimental::smartmatch";
+use feature "switch";
 
 # Route with placeholder
 
@@ -148,7 +150,9 @@ sub render_mp($cfg, $c)
 	}
 	else
 	{
-		my $response_content = get_response_content($inner_dom->at('Content')->text);
+		my $response_content = get_response_content($cfg,
+						$inner_dom->at('Content')->text,
+						$c->param('openid'));
 		my $response_encrypted = WeixinMPEncrypt::encrypt($cfg->param('AES.KEY'),
 				make_response_xml(
 					$inner_dom->at('FromUserName')->text,
@@ -174,33 +178,77 @@ sub render_503($c)
 	$c->render(text => '', status => 503);
 };
 
+sub render_sms($cfg, $c)
+{
+	my $encrypted = $c->req->body;
+	my $decrypted = WeixinMPEncrypt::decrypt($cfg->param('AES.KEY'),
+						$encrypted,
+						$cfg->param('AES.APPID'));
+	if (!$decrypted)
+	{
+		$c->render(text => '', status => 503);
+		return;
+	}
+
+	my ($openid, $content) = split(/,/, $decrypted, 2);
+
+	$cfg->param('sms')->{$openid} = [] if (!defined($cfg->param('sms')->{$openid}));
+	push @{$cfg->param('sms')->{$openid}}, $content;
+	say Dumper($cfg->param('sms'));
+
+	$c->render(text => '', status => 204);
+}
+
 sub get_render_function($func)
 {
 	state $cfg = Config::Simple->new('weixin_mp.ini') or die Config::Simple->error();
+	$cfg->param('sms', {}) if (!defined($cfg->param('sms')));
+
 	return partial($func, $cfg);
 }
 
-sub get_response_content($content)
+sub get_response_content($cfg, $content, $openid)
 {
-	if ($content =~ m/^sms:(\d+),(.+)$/)
+	given($content)
 	{
-		my $number = $1;
-		my $text = $2;
-		my $cmd = "gammu-smsd-inject TEXT $number -unicode -text \"$text\" > /dev/null 2>&1";
-		if (system($cmd) == 0)
+		when (m/^sms:(\d+),(.+)$/)
 		{
-			return "sms sent.";
+			my $number = $1;
+			my $text = $2;
+			my $cmd = "gammu-smsd-inject TEXT $number -unicode -text \"$text\" > /dev/null 2>&1";
+			if (system($cmd) == 0)
+			{
+				return "sms sent.";
+			}
+			else
+			{
+				return "sms error.";
+			}
 		}
-		else
+		when (m/^checksms/)
 		{
-			return "sms error.";
+			if (defined($cfg->param('sms')->{$openid}))
+			{
+				my @r = splice(@{$cfg->param('sms')->{$openid}}, 0, 3);
+				push @r, 'Continue...' if (@{$cfg->param('sms')->{$openid}} != 0);
+				say Dumper(@r);
+				return join("\n", @r) || 'no sms';
+			}
+			else
+			{
+				return 'no sms';
+			}
+		}
+		default
+		{
+			return $content;
 		}
 	}
-	return $content;
 }
 
 get '/weixinmp' => get_render_function(\&render_certificate);
 post '/weixinmp' => get_render_function(\&render_mp);
+post '/sms' => get_render_function(\&render_sms);
 any '*' => \&render_503;
 any '/' => \&render_503;
 
