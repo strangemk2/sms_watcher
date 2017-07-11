@@ -201,8 +201,8 @@ sub get_response_content($content)
 
 get '/weixinmp' => get_render_function(\&render_certificate);
 post '/weixinmp' => get_render_function(\&render_mp);
-get '*' => \&render_503;
-get '/' => \&render_503;
+any '*' => \&render_503;
+any '/' => \&render_503;
 
 # Start the Mojolicious command system
 app->start;
