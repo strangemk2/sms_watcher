@@ -85,14 +85,16 @@ sub main
 		# this try block is to prevent "Interrupted system call" error.
 		try
 		{
+			my $timestamp = time();
 			while ($loop)
 			{
-				my $timestamp = time();
 				my @events = $inotify->read();
 				die "read error: $!" if (@events == 0);
 				$logger->("Got folder inotified: " . $cfg->param('COMMON.WATCH_FOLDER'));
+				my $t = $timestamp;
 				sleep $cfg->param('COMMON.INTERVAL');
-				$sms_watcher->($timestamp);
+				$timestamp = time();
+				$sms_watcher->($t);
 			}
 		};
 	}
