@@ -194,7 +194,7 @@ sub render_sms($cfg, $c)
 
 	$cfg->param('sms')->{$openid} = [] if (!defined($cfg->param('sms')->{$openid}));
 	push @{$cfg->param('sms')->{$openid}}, $content;
-	say Dumper($cfg->param('sms'));
+	#say Dumper($cfg->param('sms'));
 
 	$c->render(text => '', status => 204);
 }
