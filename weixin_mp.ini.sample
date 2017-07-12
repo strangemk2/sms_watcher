@@ -1,0 +1,7 @@
+[AES]
+TOKEN			= xxxxxxxxxxx
+KEY			= yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+APPID			= zzzzzzzzzzzzzzzzzz
+
+[AUTH]
+OPENID			= xxxxxxxxxxxxxxxxxxxxxxxxxxxx

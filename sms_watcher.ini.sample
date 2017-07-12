@@ -23,3 +23,8 @@ DEST			= ./bak
 
 [HTTP]
 URL			= http://localhost:8888
+OPENID			= xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+[AES]
+KEY			= yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+APPID			= zzzzzzzzzzzzzzzzzz
