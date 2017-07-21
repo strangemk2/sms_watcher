@@ -1,3 +1,6 @@
+[COMMON]
+SMS_COUNT		= 5
+
 [AES]
 TOKEN			= xxxxxxxxxxx
 KEY			= yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy

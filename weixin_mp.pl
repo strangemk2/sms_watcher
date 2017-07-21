@@ -218,20 +218,21 @@ sub get_response_content($cfg, $content, $openid)
 			my $cmd = "gammu-smsd-inject TEXT $number -unicode -text \"$text\" > /dev/null 2>&1";
 			if (system($cmd) == 0)
 			{
-				return "sms sent.";
+				return "sms sent";
 			}
 			else
 			{
-				return "sms error.";
+				return "sms error";
 			}
 		}
 		when (m/^sms/)
 		{
 			if (defined($cfg->param('sms')->{$openid}))
 			{
-				my @r = splice(@{$cfg->param('sms')->{$openid}}, 0, 3);
-				push @r, 'Continue...' if (@{$cfg->param('sms')->{$openid}} != 0);
-				say Dumper(@r);
+				my @r = splice(@{$cfg->param('sms')->{$openid}}, 0, $cfg->param('COMMON.SMS_COUNT'));
+				my $sms_left = scalar(@{$cfg->param('sms')->{$openid}});
+				push @r, "$sms_left sms left, Continue..." if ($sms_left);
+				#say Dumper(@r);
 				return join("\n", @r) || 'no sms';
 			}
 			else
