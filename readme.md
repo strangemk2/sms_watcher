@@ -16,16 +16,17 @@ And dispatch recieved sms file to backend processor.
 
 ### Backend
 * Email: Send sms content by email, need smtp server.
-* Copy: Copy sms to specified folder for further process.
-* Http: Send sms content by http, encrypted by same method as weixin_mp platform.
+* Copy:  Copy sms to specified folder for further process.
+* Http:  Send sms content by http, encrypted by same method as weixin_mp platform.
 * Dummy: Not really a backend, just for log.
 
 ### weixin_mp
 A weixin_mp app for send actually sms.
 
 ### weixin_commands
-* sms:111111,aaaaaa: Send sms to number '11111' with content 'aaaaaa'.
-* checksms: Check if there's new sms. (must use with sms_watcher http backend.)
+* send:  111111,aaaaaa: Send sms to number '111111' with content 'aaaaaa'.
+* sms:   Check if there's new sms. (must use with sms_watcher http backend.)
+* clear: Clear sms queue.
 
 ## Configuration
 We have to set usb modem to sms mode use following command.
