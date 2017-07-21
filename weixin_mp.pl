@@ -211,7 +211,7 @@ sub get_response_content($cfg, $content, $openid)
 {
 	given($content)
 	{
-		when (m/^sms:(\d+),(.+)$/)
+		when (m/^send:(\d+),(.+)$/)
 		{
 			my $number = $1;
 			my $text = $2;
@@ -225,7 +225,7 @@ sub get_response_content($cfg, $content, $openid)
 				return "sms error.";
 			}
 		}
-		when (m/^checksms/)
+		when (m/^sms/)
 		{
 			if (defined($cfg->param('sms')->{$openid}))
 			{
@@ -238,6 +238,12 @@ sub get_response_content($cfg, $content, $openid)
 			{
 				return 'no sms';
 			}
+		}
+		when (m/^clear/)
+		{
+			my $sms_left = scalar(@{$cfg->param('sms')->{$openid}});
+			@{$cfg->param('sms')->{$openid}} = ();
+			return "$sms_left sms cleared";
 		}
 		default
 		{
