@@ -1,5 +1,5 @@
 [COMMON]
-BACKEND			= mail,copy
+BACKEND			= sendgrid,copy
 WATCH_FOLDER	= /var/spool/gammu/inbox/
 LOG_FILE		= log.txt
 
@@ -17,6 +17,11 @@ SERVER			= nori.com
 PORT			= 465
 USER			= hoge
 PASSWORD		= hogehoge
+
+[SENDGRID]
+FROM			= foo@bar.com
+KEY			= kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+TO				= hoge@nori.com
 
 [COPY]
 DEST			= ./bak
